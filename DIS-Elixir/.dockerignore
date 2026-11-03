@@ -1,0 +1,7 @@
+_build
+deps
+imagens
+data
+vectors
+.git
+*.log

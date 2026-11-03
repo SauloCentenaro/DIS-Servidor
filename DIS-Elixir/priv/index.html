@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="pt-BR">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Reconstrução de ultrassom — Elixir</title>
+<style>
+body{font:16px system-ui;margin:0;background:#f3f5f8;color:#182334}header{background:#293854;color:white;padding:28px}main{max-width:920px;margin:28px auto;padding:0 20px}form,article{background:white;border:1px solid #d9dfeb;border-radius:10px;padding:22px;margin:16px 0}input,button{font:inherit;padding:9px}button{background:#3458b0;color:white;border:0;border-radius:5px;cursor:pointer}button:disabled{opacity:.6;cursor:wait}label{display:inline-block;margin:8px 16px 8px 0}canvas{image-rendering:pixelated;max-width:100%;height:auto}pre{white-space:pre-wrap;max-height:130px;overflow:auto}#error{color:#b32121}small{display:block;color:#53627a;margin:12px 0}
+</style>
+<header><h1>Reconstrução de ultrassom</h1><p>Versão Elixir · CGNR</p></header>
+<main>
+<form id="form">
+<label>Quantidade de requisições <input id="count" type="number" value="1" min="1" max="100" required></label>
+<label><input id="gain" type="checkbox"> Aplicar ganho</label>
+<button id="send">Enviar</button>
+<small>O modelo e um dos três vetores de medições são sorteados a cada pedido.</small>
+</form>
+<p id="status" role="status"></p><pre id="error" role="alert"></pre><section id="results"></section>
+</main>
+<script>
+const form = document.querySelector('#form');
+let sending = false;
+form.addEventListener('submit', async event => {
+  event.preventDefault();
+  if (sending) return;
+  const count = Number(document.querySelector('#count').value);
+  if (!Number.isInteger(count) || count < 1 || count > 100) return;
+  const gain = document.querySelector('#gain').checked;
+  sending = true;
+  for (const element of form.elements) element.disabled = true;
+  document.querySelector('#results').replaceChildren();
+  document.querySelector('#error').textContent = '';
+  let completed = 0;
+  const status = document.querySelector('#status');
+  status.textContent = 'Preparando requisições…';
+  try {
+    await Promise.all(Array.from({length: count}, async (_, index) => {
+      try {
+        const model = Math.random() > .5;
+        const file = 1 + Math.floor(Math.random() * 3);
+        const csv = await fetch('/assets/model' + (model ? 1 : 2) + '/MODEL' + file + '.csv');
+        if (!csv.ok) throw new Error('Não foi possível carregar o CSV.');
+        const vector = (await csv.text()).split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+        if (!vector.length || vector.some(s => !Number.isFinite(Number(s)))) throw new Error('CSV inválido.');
+        await new Promise(resolve => setTimeout(resolve, Math.random() * 5000));
+        const response = await fetch('/', {
+          method: 'POST', headers: {'content-type': 'application/json'},
+          body: JSON.stringify({user: Math.floor(Math.random() * 30000), model, ganho: gain, vector})
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Erro ao reconstruir imagem.');
+        render(data, model);
+      } catch (error) {
+        document.querySelector('#error').textContent += 'Requisição ' + (index + 1) + ': ' + error.message + '\n';
+      } finally {
+        status.textContent = (++completed) + ' de ' + count + ' requisições concluídas.';
+      }
+    }));
+  } finally {
+    sending = false;
+    for (const element of form.elements) element.disabled = false;
+  }
+});
+function render(data, model) {
+  const side = Math.sqrt(data.imageVector.length);
+  if (![30, 60].includes(side) || data.imageVector.some(v => !Number.isInteger(v) || v < 0 || v > 255)) throw new Error('Imagem inválida.');
+  const article = document.createElement('article');
+  const title = document.createElement('h2');
+  title.textContent = 'Usuário ' + data.user + ' · Modelo ' + (model ? 1 : 2);
+  const info = document.createElement('p');
+  info.textContent = data.iteracoes + ' iterações · ' + data.durationSeconds.toFixed(3) + ' segundos';
+  const time = document.createElement('small');
+  time.textContent = new Date(data.startTime * 1000).toLocaleString() + ' — ' + new Date(data.endTime * 1000).toLocaleString();
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = side * 10;
+  const ctx = canvas.getContext('2d');
+  data.imageVector.forEach((pixel, i) => {
+    ctx.fillStyle = 'rgb(' + pixel + ',' + pixel + ',' + pixel + ')';
+    ctx.fillRect(i % side * 10, Math.floor(i / side) * 10, 10, 10);
+  });
+  const details = document.createElement('details');
+  const summary = document.createElement('summary');
+  summary.textContent = 'Vetor de pixels';
+  const vector = document.createElement('pre');
+  vector.textContent = data.imageVector.join(', ');
+  details.append(summary, vector);
+  article.append(title, info, time, canvas, details);
+  document.querySelector('#results').append(article);
+}
+</script>
+</html>
