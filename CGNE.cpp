@@ -1,39 +1,26 @@
 #include "CGNE.hpp"
-
-ConjugateGradientNE::ConjugateGradientNE(const MatrixXd &H, const VectorXd &g) : H(H), g(g)
-{
-}
+ConjugateGradientNE::ConjugateGradientNE(const MatrixXd &H, const VectorXd &g) : H(H), g(g) {}
 std::pair<VectorXd, int> ConjugateGradientNE::solve()
 {
-  int i;
-  Eigen::VectorXd f = Eigen::VectorXd::Zero(H.cols());
-  Eigen::VectorXd r = g - (H * f);
-  Eigen::VectorXd p = H.transpose() * r;
-  Eigen::VectorXd out = f;
-  double best_error = std::numeric_limits<double>::max();
-  double r_old_norm = r.norm();
-
-  for (i = 0; i < 100; i++)
+  if (H.rows() != g.size() || !H.allFinite() || !g.allFinite())
+    throw std::invalid_argument("Matriz ou vetor invalido.");
+  VectorXd f = VectorXd::Zero(H.cols()), r = g;
+  VectorXd p = H.transpose() * r;
+  const double initial = r.norm();
+  if (initial == 0) return {f, 0};
+  int iterations = 0;
+  while (iterations < 100)
   {
-    double alpha_num = r.transpose() * r;
-    double alpha_den = p.transpose() * p;
-    double alpha = alpha_num / alpha_den;
-    f = f + (alpha * p);
-    r = r - (alpha * (H * p));
-    double error = std::abs(r.norm() - r_old_norm);
-    if ((error < best_error))
-    {
-      best_error = error;
-      out = f;
-    }
-    if (error < Tolerance)
-      break;
-    double beta_num = r.transpose() * r;
-    const double &beta_den = alpha_num;
-    double beta = beta_num / beta_den;
-    p = (H.transpose() * r) + (beta * p);
-    r_old_norm = r.norm();
+    const double numerator = r.squaredNorm(), denominator = p.squaredNorm();
+    if (!std::isfinite(numerator) || !std::isfinite(denominator) || numerator <= 0 || denominator <= 0)
+      throw std::runtime_error("Falha numerica no CGNE: sistema singular ou incompativel.");
+    const double alpha = numerator / denominator;
+    f += alpha * p;
+    r -= alpha * (H * p);
+    ++iterations;
+    if (!f.allFinite() || !r.allFinite()) throw std::runtime_error("Resultado nao finito no CGNE.");
+    if (r.norm() <= Tolerance * initial) break;
+    p = H.transpose() * r + (r.squaredNorm() / numerator) * p;
   }
-
-  return {out, i + 1};
+  return {f, iterations};
 }

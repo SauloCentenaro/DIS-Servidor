@@ -1,0 +1,36 @@
+services:
+  servidor:
+    build: .
+    image: dis-servidor-local
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - ./utils:/app/utils:ro
+      - ./imagens:/app/imagens
+  cliente:
+    build: ./DIS-Cliente
+    image: dis-cliente-local
+    restart: unless-stopped
+    depends_on:
+      servidor:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:4200:80"
+    volumes:
+      - ./DIS-Cliente/src/assets:/usr/share/nginx/html/assets:ro
+  elixir:
+    build: ./DIS-Elixir
+    image: dis-elixir-elixir
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8081:8081"
+    environment:
+      MATRIX_DIR: /data
+      VECTOR_DIR: /vectors
+      IMAGE_DIR: /app/imagens
+      PORT: "8081"
+    volumes:
+      - ./utils/MatrizesRef:/data:ro
+      - ./DIS-Cliente/src/assets:/vectors:ro
+      - ./DIS-Elixir/imagens:/app/imagens

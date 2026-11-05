@@ -1,7 +1,7 @@
 #include "server.hpp"
 
-Server::Server(asio::io_context &io_context, short port)
-    : acceptor_(io_context, asio::ip::tcp::endpoint(asio::ip::tcp::v4(), port)),
+Server::Server(asio::io_context &io_context, short port, asio::thread_pool &workers)
+    : workers_(workers), acceptor_(io_context, asio::ip::tcp::endpoint(asio::ip::tcp::v4(), port)),
       socket_(io_context)
 {
   accept();
@@ -14,7 +14,7 @@ void Server::accept()
                          {
                            if (!ec)
                            {
-                             std::make_shared<Session>(std::move(socket_))->start();
+                             std::make_shared<Session>(std::move(socket_), workers_)->start();
                            }
                            accept();
                          });

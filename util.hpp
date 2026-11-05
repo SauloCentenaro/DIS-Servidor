@@ -4,9 +4,11 @@
 #include <mutex>
 #include <chrono>
 #include <ctime>
+#ifdef _WIN32
 #include <winsock2.h>
 #include <windows.h>
 #include <pdh.h>
+#endif
 #include <queue>
 #include "CGNE.hpp"
 #include "CGNR.hpp"
@@ -18,9 +20,6 @@
 #include <boost/beast.hpp>
 #include <boost/beast/http.hpp>
 #include <boost/asio/coroutine.hpp>
-#include <boost/json/parse.hpp>
-#include <boost/json/value.hpp>
-#include <boost/json.hpp>
 
 namespace asio = boost::asio;
 namespace http = boost::beast::http;

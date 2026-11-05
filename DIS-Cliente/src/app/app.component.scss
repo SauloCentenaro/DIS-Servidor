@@ -1,0 +1,17 @@
+.custom-header {
+  background-color: #3498db; /* Cor de fundo azul */
+  padding: 20px; /* Espaçamento interno */
+  margin-bottom: 10px;
+  text-align: center; /* Centralizar o texto */
+  color: white; /* Cor do texto branco */
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Sombra leve */
+}
+
+.custom-header h1 {
+  margin: 0; /* Remover margens padrão do h1 */
+}
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}

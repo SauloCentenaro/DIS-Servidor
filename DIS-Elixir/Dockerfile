@@ -10,4 +10,5 @@ COPY . .
 RUN mix compile
 RUN mix test
 EXPOSE 8081
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 CMD ["elixir", "healthcheck.exs"]
 CMD ["mix", "run", "--no-halt"]

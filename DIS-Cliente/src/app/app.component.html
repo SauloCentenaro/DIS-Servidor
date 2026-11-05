@@ -1,0 +1,75 @@
+<header class="custom-header">
+  <h1>{{ titulo }}</h1>
+</header>
+
+<div class="container text-center card">
+  <div class="row card-body">
+    <div class="row">
+      <div class="col-md-6">
+        <div class="input-group mb-3">
+          <span class="input-group-text" id="basic-addon1">Número de requisições</span>
+          <input type="number" class="form-control" placeholder="Insira o número" aria-label="Número de requisições"
+            aria-describedby="basic-addon1" [(ngModel)]="requisicoes" min="1" max="100" step="1" [disabled]="sending">
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="d-grid gap-2">
+          <button type="button" class="btn btn-info" (click)="sendRequests()" [disabled]="sending">{{ sending ? 'Processando...' : 'Enviar' }}</button>
+        </div>
+      </div>
+    </div>
+    <div class="alert alert-danger" role="alert" *ngFor="let error of errors">{{ error }}</div>
+    <div class="accordion row" style="padding: 10px;" *ngIf="allReturns.length > 0" id="accordionRequests">
+      <div *ngFor="let return of allReturns; let i = index" class="accordion-item">
+        <h2 class="accordion-header">
+          <button class="btn btn-secondary w-100" style="margin: 5px;" type="button" (click)="atualizarAccordion(i)">
+            Requisição do usuário: {{ return.user }}
+          </button>
+        </h2>
+        <div class="accordion-collapse collapse" [id]="'accordion_' + i">
+          <div class="accordion-body">
+            <fieldset disabled>
+              <div class="row">
+                <div class="col">
+                  <div class="mb-3">
+                    <label for="disabledTextInput" class="form-label">Início</label>
+                    <input type="text" class="form-control" [value]="(return.startTime * 1000) | date:'dd/MM/yyyy HH:mm:ss.SSS'">
+                  </div>
+                </div>
+                <div class="col">
+                  <div class="mb-3">
+                    <label for="disabledTextInput" class="form-label">Fim</label>
+                    <input type="text" class="form-control" [value]="(return.endTime * 1000) | date:'dd/MM/yyyy HH:mm:ss.SSS'">
+                  </div>
+                </div>
+                <div class="col">
+                  <div class="mb-3">
+                    <label for="disabledTextInput" class="form-label">Iterações</label>
+                    <input type="text" id="disabledTextInput" class="form-control" [value]="return.iteracoes">
+                  </div>
+                </div>
+              </div>
+              <div class="row">
+                <div class="col">
+                  <div class="input-group">
+                    <span class="input-group-text">Vetor GrayScale Recebido</span>
+                    <textarea class="form-control" style="height: 160px;" aria-label="With textarea"
+                      [value]="return.imageVector"></textarea>
+                  </div>
+                </div>
+              </div>
+              <div style="margin-top: 10px;" class="row">
+                <div class="col">
+                  <div class="input-group mb-3">
+                    <label class="input-group-text" id="basic-addon1">Imagem Recebida</label>
+                    <img [src]="return.image" id="basic-addon1" alt="Imagem Recebida" class="form-control">
+                  </div>
+                </div>
+              </div>
+            </fieldset>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

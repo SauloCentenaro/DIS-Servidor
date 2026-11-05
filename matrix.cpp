@@ -12,7 +12,7 @@ ModlMat::~ModlMat()
 
 void ModlMat::loadMat(MatrixXd &mat, string path)
 {
-  fstream file;
+  ifstream file;
   file.open(path);
   if (!file.is_open())
   {
