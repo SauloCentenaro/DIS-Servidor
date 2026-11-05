@@ -1,13 +1,13 @@
 services:
   servidor:
-    build: .
+    build: ./DIS-C++
     image: dis-servidor-local
     restart: unless-stopped
     ports:
       - "127.0.0.1:8080:8080"
     volumes:
-      - ./utils:/app/utils:ro
-      - ./imagens:/app/imagens
+      - ./DIS-C++/utils:/app/utils:ro
+      - ./DIS-C++/imagens:/app/imagens
   cliente:
     build: ./DIS-Cliente
     image: dis-cliente-local
@@ -31,6 +31,6 @@ services:
       IMAGE_DIR: /app/imagens
       PORT: "8081"
     volumes:
-      - ./utils/MatrizesRef:/data:ro
+      - ./DIS-C++/utils/MatrizesRef:/data:ro
       - ./DIS-Cliente/src/assets:/vectors:ro
       - ./DIS-Elixir/imagens:/app/imagens
