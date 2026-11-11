@@ -46,6 +46,7 @@ services:
       VECTOR_DIR: /vectors
       IMAGE_DIR: /images
       PORT: "8081"
+      WORKER_THREADS: "${BACKEND_WORKERS:-1}"
       ERL_FLAGS: "+S ${BACKEND_WORKERS:-1}:${BACKEND_WORKERS:-1}"
       XLA_TARGET: cpu
     ports:

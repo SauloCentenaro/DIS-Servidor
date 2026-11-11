@@ -103,6 +103,14 @@ Para uma sessão autônoma de aproximadamente uma hora no WSL, com snapshots de 
 bash ./run-afk-hour.sh
 ```
 
+Para estudar a curva de desempenho com CPU, RAM e concorrencia progressivas:
+
+```bash
+bash ./scripts/run-resource-scenario.sh S01 0.5 800m 1 2 2m
+```
+
+O roteiro completo, com 10 configuracoes e campos para registrar cada resultado, esta em `docs/resource-scaling-plan.md`.
+
 Os logs, status por etapa e relatórios ficam em `stresser+benchmarker/results/afk-<data>/`.
 
 Detalhes metodológicos e troubleshooting do laboratório ficam em `stresser+benchmarker/README.md` e `stresser+benchmarker/docs/`.

@@ -274,6 +274,10 @@ PROM_QUERIES = {
 }
 
 
+def render_prometheus_query(template, container):
+    return template.replace("{container}", re.escape(container))
+
+
 def prometheus_query_range(base_url, query, start, end, step=1):
     params = urllib.parse.urlencode({"query": query, "start": start, "end": end, "step": step})
     with urllib.request.urlopen(f"{base_url}/api/v1/query_range?{params}", timeout=30) as response:
@@ -285,7 +289,9 @@ def prometheus_query_range(base_url, query, start, end, step=1):
 def collect_metrics(result_dir, container, start, end, prom_url):
     query_record, series, rows = {}, {}, []
     for name, template in PROM_QUERIES.items():
-        query = template.format(container=re.escape(container))
+        # PromQL uses braces extensively; str.format() interprets them as Python
+        # fields. Replace only the benchmark placeholder.
+        query = render_prometheus_query(template, container)
         query_record[name] = query
         try: values = prometheus_query_range(prom_url, query, start, end)
         except Exception as exc: values = {"error": str(exc)}
@@ -375,6 +381,11 @@ def run_experiment(args):
     environment = host_environment(); write_json(result_dir / "environment.json", environment)
     inspect = inspect_container(target.get("container_name")); write_json(result_dir / "target-inspect.json", redact(inspect))
     payload_path = ROOT / target["payload"]
+    parameter_map = {}
+    for item in args.parameter or []:
+        if "=" in item:
+            key, value = item.split("=", 1)
+            parameter_map[key] = value
     metadata = {
         "schema_version": 1, "status": "started", "run_id": run_id, "target": args.target,
         "implementation": target.get("implementation", args.target), "experiment": args.experiment,
@@ -387,7 +398,8 @@ def run_experiment(args):
         "container_name": target.get("container_name"), "container_id": inspect.get("Id"),
         "container_image": inspect.get("Config", {}).get("Image"), "image_digest": inspect.get("Image"),
         "cpu_limit": inspect.get("HostConfig", {}).get("NanoCpus") or inspect.get("HostConfig", {}).get("CpuQuota"),
-        "memory_limit_bytes": inspect.get("HostConfig", {}).get("Memory"), "custom_parameters": redact(args.parameter or []),
+        "memory_limit_bytes": inspect.get("HostConfig", {}).get("Memory"),
+        "custom_parameters": redact(args.parameter or []), "custom_parameter_map": redact(parameter_map),
         "host_cpu_count": environment.get("docker_info", {}).get("NCPU") or environment.get("cpu_count"),
         "host_memory_bytes": environment.get("docker_info", {}).get("MemTotal"),
         "host_operating_system": environment.get("docker_info", {}).get("OperatingSystem") or environment.get("platform"),

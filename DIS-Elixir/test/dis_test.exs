@@ -2,6 +2,20 @@ defmodule DisTest do
   use ExUnit.Case
   import Plug.Test
 
+  test "worker concurrency limit follows WORKER_THREADS" do
+    previous = System.get_env("WORKER_THREADS")
+    on_exit(fn ->
+      if previous,
+        do: System.put_env("WORKER_THREADS", previous),
+        else: System.delete_env("WORKER_THREADS")
+    end)
+
+    System.put_env("WORKER_THREADS", "3")
+    assert {:ok, %{limit: 3, running: running, queue: queue}} = Dis.Worker.init(nil)
+    assert running == %{}
+    assert :queue.is_empty(queue)
+  end
+
   test "zero and known solutions for both algorithms" do
     h = Nx.tensor([[1, 0, 0], [0, 2, 0], [0, 0, 3]], type: :f64)
 
