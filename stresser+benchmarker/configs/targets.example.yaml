@@ -1,0 +1,56 @@
+{
+  "targets": {
+    "mock": {
+      "implementation": "python-mock",
+      "base_url": "http://mock:8080",
+      "endpoint": "/reconstruct",
+      "method": "POST",
+      "headers": {"Content-Type": "application/json"},
+      "payload": "k6/payloads/example.json",
+      "container_name": "benchmark-mock",
+      "health_endpoint": "/health",
+      "expected_status": 200,
+      "timeout": "10s",
+      "required_fields": ["result", "count"],
+      "minimum_response_bytes": 20,
+      "array_lengths": {"result": 3},
+      "full_validation": false,
+      "insecure_tls": false,
+      "tags": {"model": "mock-v1"}
+    },
+    "cpp": {
+      "implementation": "cpp",
+      "base_url": "http://servidor:8080",
+      "endpoint": "/reconstruct",
+      "method": "POST",
+      "headers": {"Content-Type": "application/json"},
+      "payload": "k6/payloads/dis-request.json",
+      "container_name": "dis-cpp",
+      "health_endpoint": "/health",
+      "expected_status": 200,
+      "timeout": "30s",
+      "required_fields": ["imageVector", "user", "iteracoes", "durationSeconds"],
+      "minimum_response_bytes": 100,
+      "full_validation": false,
+      "insecure_tls": false,
+      "tags": {}
+    },
+    "elixir": {
+      "implementation": "elixir",
+      "base_url": "http://elixir:8081",
+      "endpoint": "/reconstruct",
+      "method": "POST",
+      "headers": {"Content-Type": "application/json"},
+      "payload": "k6/payloads/dis-request.json",
+      "container_name": "dis-elixir",
+      "health_endpoint": "/health",
+      "expected_status": 200,
+      "timeout": "30s",
+      "required_fields": ["imageVector", "user", "iteracoes", "durationSeconds"],
+      "minimum_response_bytes": 100,
+      "full_validation": false,
+      "insecure_tls": false,
+      "tags": {}
+    }
+  }
+}

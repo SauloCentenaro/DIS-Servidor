@@ -1,0 +1,10 @@
+groups:
+  - name: container-derived
+    interval: 1s
+    rules:
+      - record: benchmark:container_cpu_cores:rate1m
+        expr: rate(container_cpu_usage_seconds_total{image!=""}[1m])
+      - record: benchmark:container_network_receive_bytes:rate1m
+        expr: rate(container_network_receive_bytes_total{image!=""}[1m])
+      - record: benchmark:container_network_transmit_bytes:rate1m
+        expr: rate(container_network_transmit_bytes_total{image!=""}[1m])

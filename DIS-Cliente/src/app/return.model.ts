@@ -4,5 +4,6 @@ export class ReturnModel {
     iteracoes!: number;
     startTime!: number;
     endTime!: number;
+    durationSeconds!: number;
     image: string | undefined;
 }

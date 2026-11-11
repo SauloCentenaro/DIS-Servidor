@@ -32,7 +32,10 @@ defmodule Dis.Router do
     end
   end
 
-  post "/" do
+  post("/", do: reconstruct(conn))
+  post("/reconstruct", do: reconstruct(conn))
+
+  defp reconstruct(conn) do
     case read_body(conn, length: 8_000_000, read_length: 8_000_000) do
       {:ok, body, conn} ->
         case Jason.decode(body) do

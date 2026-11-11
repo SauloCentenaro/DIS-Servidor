@@ -5,6 +5,8 @@
 #include <cmath>
 #include <stdexcept>
 #include <vector>
+#include <cstdlib>
+#include <filesystem>
 
 namespace ImageGeneration
 {
@@ -33,7 +35,10 @@ namespace ImageGeneration
     for (int y = 0; y < side; ++y)
       for (int x = 0; x < side; ++x)
         image.at<uchar>(y, x) = static_cast<uchar>(pixels[y * side + x]);
-    if (!cv::imwrite("imagens/" + filename + ".png", image))
+    const char *configured = std::getenv("IMAGE_DIR");
+    const std::filesystem::path directory = configured ? configured : "imagens";
+    std::filesystem::create_directories(directory);
+    if (!cv::imwrite((directory / (filename + ".png")).string(), image))
       throw std::runtime_error("Nao foi possivel salvar a imagem.");
   }
 }

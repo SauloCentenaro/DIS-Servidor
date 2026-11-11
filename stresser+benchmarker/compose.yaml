@@ -1,0 +1,105 @@
+services:
+  prometheus:
+    image: prom/prometheus:v3.2.1
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=${PROMETHEUS_RETENTION:-15d}
+      - --web.enable-remote-write-receiver
+    ports:
+      - "${BIND_ADDRESS:-127.0.0.1}:${PROMETHEUS_PORT:-9090}:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/rules.yml:/etc/prometheus/rules.yml:ro
+      - prometheus-data:/prometheus
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.49.2
+    privileged: true
+    ports:
+      - "${BIND_ADDRESS:-127.0.0.1}:${CADVISOR_PORT:-8082}:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+      - /dev/disk:/dev/disk:ro
+    command:
+      - --docker_only=true
+      - --housekeeping_interval=${CADVISOR_INTERVAL:-1s}
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/healthz"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:11.6.0
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-change-me}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    ports:
+      - "${BIND_ADDRESS:-127.0.0.1}:${GRAFANA_PORT:-3000}:3000"
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:3000/api/health || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  k6:
+    image: grafana/k6:0.57.0
+    profiles: ["tools"]
+    working_dir: /workspace
+    volumes:
+      - ./k6:/workspace/k6:ro
+      - ./results:/results
+    environment:
+      K6_PROMETHEUS_RW_SERVER_URL: http://prometheus:9090/api/v1/write
+      K6_PROMETHEUS_RW_TREND_STATS: p(50),p(90),p(95),p(99),max
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    depends_on:
+      prometheus:
+        condition: service_healthy
+
+  mock:
+    image: python:3.13.2-alpine3.21
+    container_name: benchmark-mock
+    profiles: ["mock"]
+    working_dir: /app
+    command: ["python", "/app/server.py"]
+    environment:
+      PORT: "8080"
+      ARTIFICIAL_DELAY_MS: ${MOCK_DELAY_MS:-0}
+      ERROR_RATE: ${MOCK_ERROR_RATE:-0}
+    volumes:
+      - ./mock/server.py:/app/server.py:ro
+    ports:
+      - "${BIND_ADDRESS:-127.0.0.1}:${MOCK_PORT:-8080}:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/health"]
+      interval: 3s
+      timeout: 2s
+      retries: 20
+
+volumes:
+  prometheus-data:
+  grafana-data:

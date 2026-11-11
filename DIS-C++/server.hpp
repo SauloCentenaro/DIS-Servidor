@@ -4,7 +4,7 @@
 class Server
 {
 public:
-  Server(asio::io_context &io_context, short port, asio::thread_pool &workers);
+  Server(asio::io_context &io_context, unsigned short port, asio::thread_pool &workers);
 
 private:
   void accept();

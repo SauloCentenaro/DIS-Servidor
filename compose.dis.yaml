@@ -1,36 +1,73 @@
+include:
+  - path: ./stresser+benchmarker/compose.yaml
+
+x-backend-common: &backend-common
+  restart: unless-stopped
+  init: true
+  cpus: "${BACKEND_CPUS:-1.0}"
+  mem_limit: "${BACKEND_MEMORY:-2g}"
+  mem_reservation: "${BACKEND_MEMORY_RESERVATION:-512m}"
+  pids_limit: ${BACKEND_PIDS_LIMIT:-512}
+  stop_grace_period: 30s
+  security_opt:
+    - no-new-privileges:true
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
 services:
   servidor:
-    build: ./DIS-C++
-    image: dis-servidor-local
-    restart: unless-stopped
+    <<: *backend-common
+    container_name: dis-cpp
+    build:
+      context: ./DIS-C++
+    image: dis-cpp:local
+    environment:
+      PORT: "8080"
+      WORKER_THREADS: "${BACKEND_WORKERS:-1}"
+      MATRIX_DIR: /data
+      IMAGE_DIR: /images
     ports:
-      - "127.0.0.1:8080:8080"
+      - "${BIND_ADDRESS:-127.0.0.1}:8080:8080"
     volumes:
-      - ./DIS-C++/utils:/app/utils:ro
-      - ./DIS-C++/imagens:/app/imagens
-  cliente:
-    build: ./DIS-Cliente
-    image: dis-cliente-local
-    restart: unless-stopped
-    depends_on:
-      servidor:
-        condition: service_healthy
-    ports:
-      - "127.0.0.1:4200:80"
-    volumes:
-      - ./DIS-Cliente/src/assets:/usr/share/nginx/html/assets:ro
+      - ./DIS-C++/utils/MatrizesRef:/data:ro
+      - ./DIS-C++/imagens:/images
+
   elixir:
-    build: ./DIS-Elixir
-    image: dis-elixir-elixir
-    restart: unless-stopped
-    ports:
-      - "127.0.0.1:8081:8081"
+    <<: *backend-common
+    container_name: dis-elixir
+    build:
+      context: ./DIS-Elixir
+    image: dis-elixir:local
     environment:
       MATRIX_DIR: /data
       VECTOR_DIR: /vectors
-      IMAGE_DIR: /app/imagens
+      IMAGE_DIR: /images
       PORT: "8081"
+      ERL_FLAGS: "+S ${BACKEND_WORKERS:-1}:${BACKEND_WORKERS:-1}"
+      XLA_TARGET: cpu
+    ports:
+      - "${BIND_ADDRESS:-127.0.0.1}:8081:8081"
     volumes:
       - ./DIS-C++/utils/MatrizesRef:/data:ro
       - ./DIS-Cliente/src/assets:/vectors:ro
-      - ./DIS-Elixir/imagens:/app/imagens
+      - ./DIS-Elixir/imagens:/images
+
+  cliente:
+    container_name: dis-client
+    build:
+      context: ./DIS-Cliente
+    image: dis-client:local
+    restart: unless-stopped
+    init: true
+    depends_on:
+      servidor:
+        condition: service_healthy
+      elixir:
+        condition: service_healthy
+    ports:
+      - "${BIND_ADDRESS:-127.0.0.1}:4200:80"
+    volumes:
+      - ./DIS-Cliente/src/assets:/usr/share/nginx/html/assets:ro

@@ -1,4 +1,8 @@
 DIS-C++/utils/*
+.env
+node_modules/
+dist/
+.angular/
 .vscode/*
 *.exe
 imagens/

@@ -3,6 +3,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends g++ pkg-config 
 WORKDIR /app
 COPY . .
 RUN g++ -std=c++17 -O2 -pthread -I/usr/include/eigen3 main.cpp server.cpp session.cpp matrix.cpp CGNR.cpp CGNE.cpp $(pkg-config --cflags --libs opencv4) -o dis-servidor
+RUN mkdir -p imagens && g++ -std=c++17 -O2 -pthread -I. -I/usr/include/eigen3 tests/regression.cpp CGNR.cpp CGNE.cpp $(pkg-config --cflags --libs opencv4) -o regression && ./regression
 FROM debian:bookworm-slim AS runtime
 RUN apt-get update && apt-get install -y --no-install-recommends libopencv-imgcodecs406 curl && rm -rf /var/lib/apt/lists/*
 WORKDIR /app

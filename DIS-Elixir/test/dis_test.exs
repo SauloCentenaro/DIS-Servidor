@@ -71,6 +71,8 @@ defmodule DisTest do
     assert Jason.decode!(health.resp_body) == %{"status" => "ok"}
     assert (conn(:options, "/") |> Dis.Router.call([])).status == 204
     assert (conn(:post, "/", "bad") |> Dis.Router.call([])).status == 400
+    assert (conn(:post, "/reconstruct", "bad") |> Dis.Router.call([])).status == 400
+    assert (conn(:get, "/reconstruct") |> Dis.Router.call([])).status == 404
   end
 
   test "CSV loading and content type" do

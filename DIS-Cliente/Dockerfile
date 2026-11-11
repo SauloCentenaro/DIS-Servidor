@@ -1,10 +1,13 @@
 FROM node:20-bookworm-slim AS build
 ENV NG_CLI_ANALYTICS=false
+ENV CHROME_BIN=/usr/bin/chromium
+RUN apt-get update && apt-get install -y --no-install-recommends chromium && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --no-audit --no-fund
 COPY . .
 RUN mkdir -p src/assets && npm run build
+RUN npm run test:ci
 
 FROM nginx:stable-alpine
 COPY nginx.conf /etc/nginx/conf.d/default.conf

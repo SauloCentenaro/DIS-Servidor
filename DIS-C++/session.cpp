@@ -1,5 +1,6 @@
 #include "session.hpp"
 #include "Gain.hpp"
+#include <cstdlib>
 Session::Session(asio::ip::tcp::socket &&socket, asio::thread_pool &workers)
     : stream_(std::move(socket)), workers_(workers) {}
 void Session::start()
@@ -7,7 +8,8 @@ void Session::start()
   auto self = shared_from_this();
   http::async_read(stream_, buffer_, request_, [self](boost::system::error_code ec, std::size_t) {
     if (ec) return;
-    if (self->request_.method() == http::verb::post && self->request_.target() == "/")
+    if (self->request_.method() == http::verb::post &&
+        (self->request_.target() == "/" || self->request_.target() == "/reconstruct"))
       asio::post(self->workers_, [self] { self->processRequest(); });
     else self->processRequest();
   });
@@ -25,7 +27,8 @@ void Session::processRequest()
     response_.result(http::status::no_content);
   else if (request_.method() == http::verb::get && request_.target() == "/health")
     response_.body() = "{\"status\":\"ok\"}";
-  else if (request_.method() != http::verb::post || request_.target() != "/")
+  else if (request_.method() != http::verb::post ||
+           (request_.target() != "/" && request_.target() != "/reconstruct"))
   {
     response_.result(http::status::not_found);
     response_.body() = "{\"error\":\"Endpoint inexistente.\"}";
@@ -42,7 +45,7 @@ void Session::processRequest()
       const bool model = j.at("model").get<bool>(), gain = j.at("ganho").get<bool>();
       const int user = j.at("user").get<int>();
       const auto values = j.at("vector").get<std::vector<std::string>>();
-      if (values.empty()) throw std::invalid_argument("Vetor vazio.");
+      if (values.empty() || values.size() > 100000) throw std::invalid_argument("Tamanho de vetor invalido.");
       Eigen::VectorXd vector(values.size());
       for (size_t i = 0; i < values.size(); ++i)
       {
@@ -53,7 +56,9 @@ void Session::processRequest()
         vector[i] = value;
       }
       ModlMat matrix;
-      matrix.loadMat(*matrix.getMat(), model ? "utils/MatrizesRef/H-1.csv" : "utils/MatrizesRef/H-2.csv");
+      const char *matrixDir = std::getenv("MATRIX_DIR");
+      const std::string directory = matrixDir ? matrixDir : "utils/MatrizesRef";
+      matrix.loadMat(*matrix.getMat(), directory + (model ? "/H-1.csv" : "/H-2.csv"));
       if (matrix.getMat()->rows() != vector.size() || (matrix.getMat()->cols() != 900 && matrix.getMat()->cols() != 3600))
         throw std::invalid_argument("Dimensoes da matriz e do vetor incompativeis.");
       if (gain) applyGain(vector, model);

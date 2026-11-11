@@ -1,0 +1,22 @@
+{
+  "id": null,
+  "uid": "benchmark-containers",
+  "title": "Benchmark - Containers",
+  "tags": ["benchmark", "cadvisor"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "2s",
+  "time": {"from": "now-15m", "to": "now"},
+  "templating": {"list": [{"name": "container", "label": "Container", "type": "query", "datasource": {"type": "prometheus", "uid": "prometheus"}, "query": {"query": "label_values(container_last_seen, name)", "refId": "var"}, "includeAll": true, "allValue": ".*", "refresh": 1}]},
+  "panels": [
+    {"id": 1, "type": "timeseries", "title": "CPU total / user / system (cores)", "gridPos": {"x": 0, "y": 0, "w": 12, "h": 8}, "datasource": {"type": "prometheus", "uid": "prometheus"}, "targets": [{"refId": "A", "expr": "rate(container_cpu_usage_seconds_total{name=~\"$container\"}[30s])", "legendFormat": "total {{name}}"}, {"refId": "B", "expr": "rate(container_cpu_user_seconds_total{name=~\"$container\"}[30s])", "legendFormat": "user {{name}}"}, {"refId": "C", "expr": "rate(container_cpu_system_seconds_total{name=~\"$container\"}[30s])", "legendFormat": "system {{name}}"}]},
+    {"id": 2, "type": "timeseries", "title": "Memória / working set / cache", "gridPos": {"x": 12, "y": 0, "w": 12, "h": 8}, "datasource": {"type": "prometheus", "uid": "prometheus"}, "fieldConfig": {"defaults": {"unit": "bytes"}}, "targets": [{"refId": "A", "expr": "container_memory_usage_bytes{name=~\"$container\"}", "legendFormat": "usage"}, {"refId": "B", "expr": "container_memory_working_set_bytes{name=~\"$container\"}", "legendFormat": "working set"}, {"refId": "C", "expr": "container_memory_cache{name=~\"$container\"}", "legendFormat": "cache"}]},
+    {"id": 3, "type": "timeseries", "title": "Rede (bytes/s)", "gridPos": {"x": 0, "y": 8, "w": 12, "h": 8}, "datasource": {"type": "prometheus", "uid": "prometheus"}, "fieldConfig": {"defaults": {"unit": "Bps"}}, "targets": [{"refId": "A", "expr": "sum by (name) (rate(container_network_receive_bytes_total{name=~\"$container\"}[30s]))", "legendFormat": "RX"}, {"refId": "B", "expr": "sum by (name) (rate(container_network_transmit_bytes_total{name=~\"$container\"}[30s]))", "legendFormat": "TX"}]},
+    {"id": 4, "type": "timeseries", "title": "Block I/O (bytes/s)", "gridPos": {"x": 12, "y": 8, "w": 12, "h": 8}, "datasource": {"type": "prometheus", "uid": "prometheus"}, "fieldConfig": {"defaults": {"unit": "Bps"}}, "targets": [{"refId": "A", "expr": "sum by (name) (rate(container_fs_reads_bytes_total{name=~\"$container\"}[30s]))", "legendFormat": "read"}, {"refId": "B", "expr": "sum by (name) (rate(container_fs_writes_bytes_total{name=~\"$container\"}[30s]))", "legendFormat": "write"}]},
+    {"id": 5, "type": "timeseries", "title": "CPU throttling", "gridPos": {"x": 0, "y": 16, "w": 8, "h": 7}, "datasource": {"type": "prometheus", "uid": "prometheus"}, "targets": [{"refId": "A", "expr": "rate(container_cpu_cfs_throttled_seconds_total{name=~\"$container\"}[30s])", "legendFormat": "{{name}}"}]},
+    {"id": 6, "type": "timeseries", "title": "Processos e threads", "gridPos": {"x": 8, "y": 16, "w": 8, "h": 7}, "datasource": {"type": "prometheus", "uid": "prometheus"}, "targets": [{"refId": "A", "expr": "container_processes{name=~\"$container\"}", "legendFormat": "processes"}, {"refId": "B", "expr": "container_threads{name=~\"$container\"}", "legendFormat": "threads"}]},
+    {"id": 7, "type": "timeseries", "title": "OOM / memory failures", "gridPos": {"x": 16, "y": 16, "w": 8, "h": 7}, "datasource": {"type": "prometheus", "uid": "prometheus"}, "targets": [{"refId": "A", "expr": "increase(container_oom_events_total{name=~\"$container\"}[1m])", "legendFormat": "OOM"}, {"refId": "B", "expr": "rate(container_memory_failcnt{name=~\"$container\"}[1m])", "legendFormat": "failures/s"}]},
+    {"id": 8, "type": "stat", "title": "Uptime / restarts inferred", "gridPos": {"x": 0, "y": 23, "w": 24, "h": 5}, "datasource": {"type": "prometheus", "uid": "prometheus"}, "targets": [{"refId": "A", "expr": "time() - container_start_time_seconds{name=~\"$container\"}", "legendFormat": "uptime {{name}}"}, {"refId": "B", "expr": "changes(container_start_time_seconds{name=~\"$container\"}[1h])", "legendFormat": "restarts in 1h"}]}
+  ]
+}

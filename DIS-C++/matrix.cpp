@@ -1,4 +1,5 @@
 #include "matrix.hpp"
+#include <cmath>
 
 ModlMat::ModlMat()
 {
@@ -12,63 +13,48 @@ ModlMat::~ModlMat()
 
 void ModlMat::loadMat(MatrixXd &mat, string path)
 {
-  ifstream file;
-  file.open(path);
+  ifstream file(path);
   if (!file.is_open())
-  {
-    cerr << file.is_open() << "Erro ao abrir o arquivo." << endl;
-    return;
-  }
+    throw runtime_error("Nao foi possivel abrir a matriz: " + path);
 
   vector<vector<double>> data;
   string line, cell;
+  size_t expectedColumns = 0;
 
   while (getline(file, line))
   {
     stringstream lineStream(line);
     vector<double> row;
-
     while (getline(lineStream, cell, ','))
     {
       try
       {
-        row.push_back(stod(cell));
+        size_t consumed = 0;
+        const double value = stod(cell, &consumed);
+        if (consumed != cell.size() || !std::isfinite(value))
+          throw invalid_argument("Matriz contem valor invalido.");
+        row.push_back(value);
       }
-      catch (const invalid_argument &e)
+      catch (const invalid_argument &)
       {
-        cerr << "Erro ao converter para double: " << e.what() << endl;
-        return;
+        throw invalid_argument("Matriz contem valor invalido.");
       }
-      catch (const out_of_range &e)
+      catch (const out_of_range &)
       {
-        cerr << "Valor fora do alcance: " << e.what() << endl;
-        return;
+        throw invalid_argument("Matriz contem valor fora do alcance.");
       }
     }
-
-    data.push_back(row);
+    if (row.empty()) throw invalid_argument("Matriz contem linha vazia.");
+    if (expectedColumns == 0) expectedColumns = row.size();
+    if (row.size() != expectedColumns)
+      throw invalid_argument("Matriz com linhas de tamanhos diferentes.");
+    data.push_back(std::move(row));
   }
 
-  file.close();
-
-  size_t cols = data.empty() ? 0 : data[0].size();
-  for (const auto &row : data)
-  {
-    if (row.size() != cols)
-    {
-      cerr << "Número inconsistente de colunas." << endl;
-      return;
-    }
-  }
-
-  mat = MatrixXd::Zero(data.size(), cols);
-  for (size_t i = 0; i < data.size(); ++i)
-  {
-    for (size_t j = 0; j < cols; ++j)
-    {
-      mat(i, j) = data[i][j];
-    }
-  }
-
+  if (data.empty()) throw invalid_argument("Matriz vazia.");
+  mat = MatrixXd::Zero(data.size(), expectedColumns);
+  for (size_t row = 0; row < data.size(); ++row)
+    for (size_t column = 0; column < expectedColumns; ++column)
+      mat(row, column) = data[row][column];
   *matRef = mat;
 }
