@@ -7,8 +7,8 @@ O Compose raiz sobe os dois servidores, o client e toda a observabilidade. O k6 
 Os dados científicos não estão no repositório. Antes de construir a stack, coloque:
 
 ```text
-DIS-C++/utils/MatrizesRef/H-1.csv
-DIS-C++/utils/MatrizesRef/H-2.csv
+data/matrices/H-1.csv
+data/matrices/H-2.csv
 DIS-Cliente/src/assets/model1/MODEL1.csv
 DIS-Cliente/src/assets/model1/MODEL2.csv
 DIS-Cliente/src/assets/model1/MODEL3.csv
@@ -17,7 +17,7 @@ DIS-Cliente/src/assets/model2/MODEL2.csv
 DIS-Cliente/src/assets/model2/MODEL3.csv
 ```
 
-Os dois backends montam as mesmas matrizes. `model=true` usa `H-1.csv` e vetores de `model1`; `model=false` usa `H-2.csv` e vetores de `model2`. O número de amostras do vetor deve ser igual ao número de linhas da matriz correspondente. As matrizes devem produzir 900 ou 3600 pixels (30×30 ou 60×60).
+Os dois backends montam as mesmas matrizes de `data/matrices`. `model=true` usa `H-1.csv` (50.816 amostras, saída 60×60) e `model=false` usa `H-2.csv` (27.904 amostras, saída 30×30). Os pequenos arquivos em `data/samples` são preservados, mas não têm as dimensões exigidas por estas matrizes.
 
 ## Subir tudo
 
@@ -50,6 +50,28 @@ py -3 stresser+benchmarker/scripts/generate-payload.py `
   --vector DIS-Cliente/src/assets/model2/MODEL1.csv --model 2
 ```
 
+Enquanto os vetores reais não estiverem disponíveis, gere um payload sintético determinístico para validar infraestrutura e executar carga técnica (não use seus números como resultado científico):
+
+```powershell
+py -3 stresser+benchmarker/scripts/generate-payload.py --synthetic --model 2
+```
+
+Para reproduzir a preparação do front sem usar o Angular e comparar diretamente C++ e Elixir:
+
+```powershell
+py -3 scripts/compare_backends.py `
+  --payload stresser+benchmarker/k6/payloads/dis-request.json `
+  --output stresser+benchmarker/results/backend-parity.json
+```
+
+Com um vetor real, o script lê os valores, valida a dimensão e monta o mesmo JSON que o front:
+
+```powershell
+py -3 scripts/compare_backends.py --vector caminho/medicao.csv --model 2
+```
+
+Arquivos separados por `;` ou `,` são achatados, mas nunca completados ou interpolados. Assim um arquivo incompatível falha antes de alcançar os servidores.
+
 Depois execute sempre a suíte C++/Elixir pelo trigger raiz:
 
 ```powershell
@@ -74,5 +96,13 @@ As execuções são sequenciais e alternam a ordem dos backends. Resultados inde
 - `verify-docker.ps1` confirma health, igualdade dos limites Docker e igualdade lógica de uma reconstrução real.
 
 Execute tudo com `docker compose -f compose.dis.yaml build` e depois `./verify-docker.ps1`. Para desligar: `docker compose -f compose.dis.yaml down`.
+
+Para uma sessão autônoma de aproximadamente uma hora no WSL, com snapshots de relatório após cada etapa:
+
+```bash
+bash ./run-afk-hour.sh
+```
+
+Os logs, status por etapa e relatórios ficam em `stresser+benchmarker/results/afk-<data>/`.
 
 Detalhes metodológicos e troubleshooting do laboratório ficam em `stresser+benchmarker/README.md` e `stresser+benchmarker/docs/`.

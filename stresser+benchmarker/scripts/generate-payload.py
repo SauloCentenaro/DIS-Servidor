@@ -5,7 +5,9 @@ import json
 from pathlib import Path
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--vector", required=True, help="CSV with one numeric sample per row")
+source = parser.add_mutually_exclusive_group(required=True)
+source.add_argument("--vector", help="CSV with one numeric sample per row")
+source.add_argument("--synthetic", action="store_true", help="generate a deterministic non-zero infrastructure payload")
 parser.add_argument("--model", choices=("1", "2"), required=True)
 parser.add_argument("--gain", action="store_true")
 parser.add_argument("--user", type=int, default=900001)
@@ -13,13 +15,19 @@ default_output = Path(__file__).resolve().parents[1] / "k6/payloads/dis-request.
 parser.add_argument("--output", default=str(default_output))
 args = parser.parse_args()
 
-source = Path(args.vector)
-values = [line.strip() for line in source.read_text(encoding="utf-8-sig").splitlines() if line.strip()]
+expected = 50_816 if args.model == "1" else 27_904
+if args.synthetic:
+    values = [f"{1 + (index % 17) / 100:.2f}" for index in range(expected)]
+else:
+    vector_path = Path(args.vector)
+    values = [line.strip() for line in vector_path.read_text(encoding="utf-8-sig").splitlines() if line.strip()]
 if not values:
     raise SystemExit("vector CSV is empty")
 for index, value in enumerate(values, 1):
     try: float(value)
     except ValueError as exc: raise SystemExit(f"invalid number at line {index}: {value}") from exc
+if len(values) != expected:
+    raise SystemExit(f"model {args.model} requires {expected} samples, got {len(values)}")
 
 output = Path(args.output)
 output.parent.mkdir(parents=True, exist_ok=True)

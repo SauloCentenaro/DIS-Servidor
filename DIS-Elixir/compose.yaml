@@ -9,6 +9,6 @@ services:
       IMAGE_DIR: /app/imagens
       PORT: "8081"
     volumes:
-      - ${DIS_MATRIX_DIR:-./data}:/data:ro
+      - ${DIS_MATRIX_DIR:-../data/matrices}:/data:ro
       - ${DIS_VECTOR_DIR:-./vectors}:/vectors:ro
       - ./imagens:/app/imagens

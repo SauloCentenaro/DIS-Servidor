@@ -3,6 +3,15 @@ DIS-C++/utils/*
 node_modules/
 dist/
 .angular/
+__pycache__/
+*.pyc
+H-1.csv/
+H-2.csv/
+Dados/
+data/matrices/*
+!data/matrices/.gitkeep
+data/samples/*
+!data/samples/.gitkeep
 .vscode/*
 *.exe
 imagens/

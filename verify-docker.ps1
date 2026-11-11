@@ -25,26 +25,10 @@ foreach ($field in $resourceFields) {
 }
 Write-Output 'OK recursos de container idênticos'
 
-$csvPath = 'DIS-Cliente/src/assets/model2/MODEL1.csv'
-if (-not (Test-Path -LiteralPath $csvPath)) {
-  throw "Dados ausentes: $csvPath. Consulte README.md."
+$payloadPath = 'stresser+benchmarker/k6/payloads/dis-request.json'
+if (-not (Test-Path -LiteralPath $payloadPath)) {
+  throw "Payload ausente: $payloadPath. Gere-o conforme README.md."
 }
-$vector = @(Get-Content -LiteralPath $csvPath | ForEach-Object { $_.Trim() } | Where-Object { $_ })
-$body = @{user=930002; model=$false; ganho=$false; vector=$vector} | ConvertTo-Json -Compress
-$cppResult = Invoke-RestMethod 'http://localhost:8080/reconstruct' -Method Post -ContentType 'application/json' -Body $body -TimeoutSec 600
-$elixirResult = Invoke-RestMethod 'http://localhost:8081/reconstruct' -Method Post -ContentType 'application/json' -Body $body -TimeoutSec 600
-
-if ($cppResult.user -ne $elixirResult.user -or $cppResult.iteracoes -ne $elixirResult.iteracoes) {
-  throw 'Divergência de user ou iterações entre C++ e Elixir.'
-}
-$difference = Compare-Object @($cppResult.imageVector) @($elixirResult.imageVector)
-if ($difference) { throw 'Divergência em imageVector entre C++ e Elixir.' }
-if ($cppResult.imageVector.Count -notin @(900, 3600)) { throw 'Dimensão de imagem inválida.' }
-
-[pscustomobject]@{
-  Status = 'PASS'
-  Pixels = $cppResult.imageVector.Count
-  Iterations = $cppResult.iteracoes
-  CppSeconds = $cppResult.durationSeconds
-  ElixirSeconds = $elixirResult.durationSeconds
-} | ConvertTo-Json
+& py -3 scripts/compare_backends.py --payload $payloadPath --output stresser+benchmarker/results/backend-parity.json
+if ($LASTEXITCODE -ne 0) { throw "Comparação entre backends falhou com código $LASTEXITCODE." }
+Write-Output 'PASS: saúde, recursos idênticos e paridade lógica C++/Elixir'
