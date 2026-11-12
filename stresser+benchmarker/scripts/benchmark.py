@@ -275,7 +275,11 @@ PROM_QUERIES = {
 
 
 def render_prometheus_query(template, container):
-    return template.replace("{container}", re.escape(container))
+    # PromQL parses the quoted selector before its RE2 regex. Regex escapes
+    # therefore need a second backslash, while a hyphen outside [] needs none.
+    regex = re.escape(container).replace(r"\-", "-")
+    promql_regex = regex.replace("\\", "\\\\").replace('"', r'\"')
+    return template.replace("{container}", promql_regex)
 
 
 def prometheus_query_range(base_url, query, start, end, step=1):
@@ -287,14 +291,16 @@ def prometheus_query_range(base_url, query, start, end, step=1):
 
 
 def collect_metrics(result_dir, container, start, end, prom_url):
-    query_record, series, rows = {}, {}, []
+    query_record, series, rows, failures = {}, {}, [], {}
     for name, template in PROM_QUERIES.items():
         # PromQL uses braces extensively; str.format() interprets them as Python
         # fields. Replace only the benchmark placeholder.
         query = render_prometheus_query(template, container)
         query_record[name] = query
         try: values = prometheus_query_range(prom_url, query, start, end)
-        except Exception as exc: values = {"error": str(exc)}
+        except Exception as exc:
+            values = {"error": str(exc)}
+            failures[name] = str(exc)
         series[name] = values
         if isinstance(values, list):
             for item in values:
@@ -306,6 +312,10 @@ def collect_metrics(result_dir, container, start, end, prom_url):
     with open(result_dir / "container-metrics.csv", "w", newline="", encoding="utf-8") as stream:
         writer = csv.DictWriter(stream, fieldnames=["timestamp", "metric", "value", "labels"])
         writer.writeheader(); writer.writerows(rows)
+    critical = {name: failures[name] for name in ("cpu_total_cores", "memory_working_set_bytes", "memory_usage_bytes") if name in failures}
+    if len(critical) == 3:
+        detail = "; ".join(f"{name}: {error}" for name, error in critical.items())
+        raise RuntimeError(f"critical Prometheus metric queries failed: {detail}")
     return series
 
 

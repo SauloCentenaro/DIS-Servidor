@@ -89,20 +89,28 @@ capture_diagnostics() {
 
 wait_healthy() {
   local name="$1"
-  local deadline=$((SECONDS + 240))
-  local health
+  local deadline=$((SECONDS + 300))
+  local health restarts last_state="" stable_since=0
   while (( SECONDS < deadline )); do
     health="$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$name" 2>/dev/null || true)"
-    if [[ "$health" == "healthy" ]]; then
-      return 0
+    restarts="$(docker inspect --format '{{.RestartCount}}' "$name" 2>/dev/null || echo '?')"
+    if [[ "$health/$restarts" != "$last_state" ]]; then
+      echo "$name: estado=$health reinicios=$restarts"
+      last_state="$health/$restarts"
     fi
-    if [[ "$health" == "unhealthy" || "$health" == "exited" || "$health" == "dead" ]]; then
-      echo "$name chegou ao estado $health."
-      return 1
+    if [[ "$health" == "healthy" ]]; then
+      if (( stable_since == 0 )); then
+        stable_since=$SECONDS
+      elif (( SECONDS - stable_since >= 15 )); then
+        echo "$name permaneceu healthy por 15 segundos."
+        return 0
+      fi
+    else
+      stable_since=0
     fi
     sleep 3
   done
-  echo "$name nao ficou healthy em 240 segundos."
+  echo "$name nao permaneceu healthy por 15 segundos dentro de 300 segundos."
   return 1
 }
 
